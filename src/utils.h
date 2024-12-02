@@ -1,6 +1,6 @@
 /*
  * Mouse sensitivity adjuster for Grand Theft Auto: Vice City
- * Author: sfwidde ([R3V]Kelvin)
+ * Author: sfwidde ([SS]Kelvin)
  * 2024-01-10
  */
 
