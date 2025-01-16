@@ -9,10 +9,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.c">
+    <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\utils.c">
+    <ClCompile Include="src\utils.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

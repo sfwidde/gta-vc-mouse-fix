@@ -1,12 +1,13 @@
-# Mouse sensitivity adjuster for Grand Theft Auto: Vice City
-This modification allows user to freely modify their GTA: Vice City's mouse
-sensitivity, especially vertical (y-axis) sensitivity which is unbalanced in
-the game by default.
+# Mouse lock fix and sensitivity adjuster for Grand Theft Auto: Vice City
+This modification attempts to fix GTA: Vice City's mouse nuisances on modern
+hardware. Additionally, it allows user to freely modify their mouse sensitivity,
+especially vertical (y-axis) sensitivity which is unbalanced in the game by
+default.
 
 Please bear in mind this mod was especially made for Vice City: Multiplayer
 (VC:MP) 0.4 players who wish to play VC:MP 0.3z R2 (or earlier versions) with
-their current 0.4 sensitivity settings. This doesn't mean, however, that the
-mod is limited to be used by VC:MP players only.
+their current 0.4 sensitivity settings. This doesn't mean, however, that the mod
+is limited to be used by VC:MP players only.
 
 ## Compatibility
 This mod is compatible with:
@@ -16,15 +17,14 @@ This mod is compatible with:
 *No other versions are supported.*
 
 ## Installation steps
-- Download the mod (`MouseSensAdj.zip`) from the
-[**Releases** page](https://github.com/sfwidde/gta-vc-mouse-sensitivity-adjuster/releases/latest).
+- Download the mod (`mousefix.zip`) from the [**Releases** page](https://github.com/sfwidde/gta-vc-mouse-fix/releases/latest).
 - Extract **.zip** file contents to your GTA's root directory.
 
 ## Configure in-game mouse sensitivity
-### `MouseSensAdj.txt` configuration file
+### `mousefix.txt` configuration file
 Each field we will cover below has a default value in case it is missing or its
-value is invalid (e.g.: `trigger_key` is not present by default in the
-configuration file but it implicitly defaults to the F9 key).
+value is invalid (e.g.: `trigger_key` is not present in the configuration file
+by default but it implicitly defaults to the F9 key).
 
 - `mouse_x`
 	- **Description:** Horizontal mouse sensitivity (x-axis).
@@ -37,9 +37,9 @@ configuration file but it implicitly defaults to the F9 key).
 - `trigger_key`
 	- **Description:** Key to press to apply the above sensitivity values
 	in-game.
-	- **Acceptable values:** Any of those on this list (except `VK_F10`):
-	https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
-	- **Default value:** 0x78 (`VK_F9`) (F9 key)
+	- **Acceptable values:** Any of those on [this list](https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes)
+	(except `VK_F10`).
+	- **Default value:** 0x78 (`VK_F9`)
 
 As mentioned above, `mouse_x` and `mouse_y` values are interchangeable with
 those of version 0.4 of VC:MP (`game_sensitivity` and `game_sensitivity_ratio`
