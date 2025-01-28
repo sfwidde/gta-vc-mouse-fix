@@ -1,23 +1,13 @@
 /*
  * Mouse lock fix and sensitivity adjuster for Grand Theft Auto: Vice City
  * Author: sfwidde ([SS]Kelvin)
- * 2024-01-10
+ * 2025-01-28
  */
 
-#include "utils.h"
-#include <string.h>
+#include "io.h"
+#include "common.h"
 #include <assert.h>
 #include <ctype.h>
-
-// -----------------------------------------------------------------------------
-
-void PatchMem(UINT_PTR address, PCVOID value, SIZE_T size)
-{
-	DWORD oldProt1, oldProt2;
-	VirtualProtect((PVOID)address, size, PAGE_EXECUTE_READWRITE, &oldProt1);
-	memcpy((PVOID)address, value, size);
-	VirtualProtect((PVOID)address, size, oldProt1, &oldProt2);
-}
 
 // -----------------------------------------------------------------------------
 

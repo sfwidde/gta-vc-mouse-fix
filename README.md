@@ -18,7 +18,8 @@ This mod is compatible with:
 
 ## Installation steps
 - Download the mod (`mousefix.zip`) from the [**Releases** page](https://github.com/sfwidde/gta-vc-mouse-fix/releases/latest).
-- Extract **.zip** file contents to your GTA's root directory.
+- Extract **.zip** file contents (`mousefix.asi` and `mousefix.txt`) to your
+GTA's root directory.
 
 ## Configure in-game mouse sensitivity
 ### `mousefix.txt` configuration file
