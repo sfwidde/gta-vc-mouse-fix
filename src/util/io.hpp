@@ -6,23 +6,7 @@
 
 #pragma once
 
-#include <windows.h>
-#include <stddef.h>
 #include <stdio.h>
-
-// -----------------------------------------------------------------------------
-
-typedef CONST void* PCVOID; // To not use LPCVOID
-
-// https://stackoverflow.com/a/18078435/14197165
-template<typename T, size_t N>
-constexpr size_t GetArraySize(const T(&)[N]) { return N; }
-
-// -----------------------------------------------------------------------------
-
-//#define NOP 0x90
-
-void PatchMem(UINT_PTR address, PCVOID value, SIZE_T size);
 
 // -----------------------------------------------------------------------------
 
@@ -34,12 +18,12 @@ void PatchMem(UINT_PTR address, PCVOID value, SIZE_T size);
 
 class ConfigFile
 {
-public:
-	static const char* GetErrorMessage(int errorCode);
+//public:
+//	static const char* GetErrorMessage(int errorCode);
 
 private:
 	FILE* file;
-	long  line;
+	//long  line;
 	char  settingName[MAX_CONFIG_FILE_SETTING_NAME];
 	char  settingValue[MAX_CONFIG_FILE_SETTING_VALUE];
 
@@ -48,7 +32,7 @@ public:
 	void Close();
 
 	bool  ReadNextLine();
-	long  GetLineNumber() const { return line; }
+	//long  GetLineNumber() const { return line; }
 	char* GetSettingName() { return *settingName ? settingName : nullptr; }
 	char* GetSettingValue() { return *settingValue ? settingValue : nullptr; }
 };

@@ -4,17 +4,25 @@
  * 2024-01-10
  */
 
-#include "main.h"
-#include "utils.h"
+#include "util/io.hpp"
+#include "gamepatch.hpp"
 #include <windows.h>
 #include <string.h>
 #include <stdlib.h>
 
-static HWND& gameWnd = *(HWND*)GTA_ADDR_HWND;
-static WNDPROC oldWndProc;
-static MouseFixSettings mousefixSettings;
+// -----------------------------------------------------------------------------
 
-static void ReadSettingsFromConfigFile()
+static WNDPROC oldWndProc;
+static struct
+{
+	float mouse_x;     // VC:MP 0.4 equivalent: game_sensitivity
+	float mouse_y;     // VC:MP 0.4 equivalent: game_sensitivity_ratio
+	WORD  trigger_key; // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+} mouseFixSettings;
+
+// -----------------------------------------------------------------------------
+
+static void ReadMouseFixSettingsFromConfigFile()
 {
 	// This is the best I could come up with
 	bool fieldHasValidValue[3] =
@@ -25,7 +33,7 @@ static void ReadSettingsFromConfigFile()
 	};
 
 	ConfigFile mousefix_txt;
-	if (mousefix_txt.Open(MOUSEFIX_CONFIG_FILE_NAME) == CONFIGFILE_SUCCESS)
+	if (mousefix_txt.Open("mousefix.txt") == CONFIGFILE_SUCCESS)
 	{
 		const char* settingName;
 		const char* settingValue;
@@ -38,45 +46,49 @@ static void ReadSettingsFromConfigFile()
 
 			if (!stricmp(settingName, "mouse_x"))
 			{
-				mousefixSettings.mouse_x = strtof(settingValue, &rem);
-				fieldHasValidValue[0] = (!*rem) && (mousefixSettings.mouse_x >= 0.0f);
+				mouseFixSettings.mouse_x = strtof(settingValue, &rem);
+				fieldHasValidValue[0] = (!*rem) && (mouseFixSettings.mouse_x >= 0.0f);
 			}
 			else if (!stricmp(settingName, "mouse_y"))
 			{
-				mousefixSettings.mouse_y = strtof(settingValue, &rem);
-				fieldHasValidValue[1] = (!*rem) && (mousefixSettings.mouse_y >= 0.0f);
+				mouseFixSettings.mouse_y = strtof(settingValue, &rem);
+				fieldHasValidValue[1] = (!*rem) && (mouseFixSettings.mouse_y >= 0.0f);
 			}
 			else if (!stricmp(settingName, "trigger_key"))
 			{
-				mousefixSettings.trigger_key = (WORD)strtoul(settingValue, &rem, 16);
+				mouseFixSettings.trigger_key = (WORD)strtoul(settingValue, &rem, 16);
 				fieldHasValidValue[2] =
 					(!*rem) &&
-					(mousefixSettings.trigger_key >= VK_LBUTTON) &&
-					(mousefixSettings.trigger_key <= VK_OEM_CLEAR) &&
-					(mousefixSettings.trigger_key != VK_F10);
+					(mouseFixSettings.trigger_key >= VK_LBUTTON) &&
+					(mouseFixSettings.trigger_key <= VK_OEM_CLEAR) &&
+					(mouseFixSettings.trigger_key != VK_F10);
 			}
 		}
 		mousefix_txt.Close();
 	}
 
 	/* Default values in case we failed to read any of the settings */
-	if (!fieldHasValidValue[0]) { mousefixSettings.mouse_x     = 0.0f;  }
-	if (!fieldHasValidValue[1]) { mousefixSettings.mouse_y     = 1.2f;  }
-	if (!fieldHasValidValue[2]) { mousefixSettings.trigger_key = VK_F9; }
+	if (!fieldHasValidValue[0]) { mouseFixSettings.mouse_x     = 0.0f;  }
+	if (!fieldHasValidValue[1]) { mouseFixSettings.mouse_y     = 1.2f;  }
+	if (!fieldHasValidValue[2]) { mouseFixSettings.trigger_key = VK_F9; }
 }
+
+// -----------------------------------------------------------------------------
 
 static void HandleKeyDown(WORD key)
 {
-	if (key == mousefixSettings.trigger_key)
+	if (key == mouseFixSettings.trigger_key)
 	{
 		// In case user changed any of the settings whilst in-game
-		ReadSettingsFromConfigFile();
+		ReadMouseFixSettingsFromConfigFile();
 
+		// Thanks Hanney for providing these addresses and of course
+		// credits to whoever found out about them in the first place
+		GameMem<FLOAT> gameMouseX(0x94DBD0);
+		GameMem<FLOAT> gameMouseY(0xA0D964);
 		// Apply sensitivity values accordingly
-		FLOAT newX = (mousefixSettings.mouse_x != 0.0f) ? mousefixSettings.mouse_x : 0.0025f;
-		FLOAT newY = (newX * mousefixSettings.mouse_y);
-		PatchMem(GTA_ADDR_MOUSE_X, &newX, sizeof(newX));
-		PatchMem(GTA_ADDR_MOUSE_Y, &newY, sizeof(newY));
+		gameMouseX.value = ((mouseFixSettings.mouse_x != 0.0f) ? mouseFixSettings.mouse_x : 0.0025f);
+		gameMouseY.value = (gameMouseX.value * mouseFixSettings.mouse_y);
 	}
 }
 
@@ -91,18 +103,28 @@ static LRESULT CALLBACK MouseFixWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 	}
 }
 
-static void MouseFixInit()
-{
-	// Hook into GTA's WndProc
-	oldWndProc = (WNDPROC)GetWindowLong(gameWnd, GWL_WNDPROC);
-	SetWindowLong(gameWnd, GWL_WNDPROC, (LONG)MouseFixWndProc);
+// -----------------------------------------------------------------------------
 
-	// Mouse lock fix
-	DWORD actualMouseFix = 0xC3C030; // Silent's work
-	PatchMem(GTA_ADDR_MOUSE_FUCKING_FIX, &actualMouseFix, sizeof(actualMouseFix));
+static BOOL MouseFixInit()
+{
+	// Attempt to create a(nother - other DLLs could have done this themselves too) WndProc subclass
+	oldWndProc = (WNDPROC)SetWindowLong(*(HWND*)0x7897A4, GWL_WNDPROC, (LONG)MouseFixWndProc);
+	// We don't want to take up user's RAM if we are of no use
+	if (!oldWndProc) { return FALSE; }
 
 	// Initial settings setup
-	ReadSettingsFromConfigFile();
+	ReadMouseFixSettingsFromConfigFile();
+
+	// Mouse lock fix taken from Silent's SilentPatch:
+	// https://github.com/CookiePLMonster/SilentPatch/blob/2a597da1bc2b974082c8b1fc13c08788b42615af/SilentPatchVC/SilentPatchVC.cpp#L2134
+	// -- could be ThirteenAG's (or somebody else's) work though, credits to whoever deserves them in this case
+	GameMem<DWORD>(0x601740).value = 0xC3C030;
+
+	// TODO: Hook the game's main loop to apply sensitivity values when a game is loaded
+	// and make it compatible with both singleplayer and 0.3z R2
+
+	// Success
+	return TRUE;
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -111,8 +133,11 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	{
 	case DLL_PROCESS_ATTACH:
 		DisableThreadLibraryCalls(hinstDLL);
-		MouseFixInit();
+		return MouseFixInit();
+
 	default:
 		return TRUE;
 	}
 }
+
+// -----------------------------------------------------------------------------

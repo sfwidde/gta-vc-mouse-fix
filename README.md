@@ -1,8 +1,7 @@
 # Mouse lock fix and sensitivity adjuster for Grand Theft Auto: Vice City
-This modification attempts to fix GTA: Vice City's mouse nuisances on modern
-hardware. Additionally, it allows user to freely modify their mouse sensitivity,
-especially vertical (y-axis) sensitivity which is unbalanced in the game by
-default.
+This modification fixes mouse not working in GTA: Vice City on modern hardware,
+and allows user to freely modify their mouse sensitivity, especially vertical
+(y-axis) sensitivity which is unbalanced in the game by default.
 
 Please bear in mind this mod was especially made for Vice City: Multiplayer
 (VC:MP) 0.4 players who wish to play VC:MP 0.3z R2 (or earlier versions) with
@@ -18,7 +17,8 @@ This mod is compatible with:
 
 ## Installation steps
 - Download the mod (`mousefix.zip`) from the [**Releases** page](https://github.com/sfwidde/gta-vc-mouse-fix/releases/latest).
-- Extract **.zip** file contents to your GTA's root directory.
+- Extract **.zip** file contents (`mousefix.asi` and `mousefix.txt`) to your
+GTA's root directory.
 
 ## Configure in-game mouse sensitivity
 ### `mousefix.txt` configuration file

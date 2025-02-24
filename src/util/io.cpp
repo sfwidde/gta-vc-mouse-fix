@@ -4,40 +4,30 @@
  * 2024-01-10
  */
 
-#include "utils.h"
-#include <string.h>
-#include <assert.h>
+#include "io.hpp"
+//#include "common.hpp"
+//#include <assert.h>
 #include <ctype.h>
 
 // -----------------------------------------------------------------------------
 
-void PatchMem(UINT_PTR address, PCVOID value, SIZE_T size)
-{
-	DWORD oldProt1, oldProt2;
-	VirtualProtect((PVOID)address, size, PAGE_EXECUTE_READWRITE, &oldProt1);
-	memcpy((PVOID)address, value, size);
-	VirtualProtect((PVOID)address, size, oldProt1, &oldProt2);
-}
-
-// -----------------------------------------------------------------------------
-
-const char* ConfigFile::GetErrorMessage(int errorCode)
-{
-	static constexpr const char* messages[] =
-	{
-		"success",                          // CONFIGFILE_SUCCESS
-		"unable to open configuration file" // CONFIGFILE_FILE_OPEN_ERROR
-	};
-	assert(errorCode >= 0 && errorCode <= (int)(GetArraySize(messages) - 1));
-	return messages[errorCode];
-}
+//const char* ConfigFile::GetErrorMessage(int errorCode)
+//{
+//	static constexpr const char* messages[] =
+//	{
+//		"success",                          // CONFIGFILE_SUCCESS
+//		"unable to open configuration file" // CONFIGFILE_FILE_OPEN_ERROR
+//	};
+//	assert(errorCode >= 0 && errorCode <= (int)(GetArraySize(messages) - 1));
+//	return messages[errorCode];
+//}
 
 int ConfigFile::Open(const char* fileName)
 {
 	file = fopen(fileName, "r");
 	if (!file) { return CONFIGFILE_FILE_OPEN_ERROR; }
 
-	line = 0;
+	//line = 0;
 	return CONFIGFILE_SUCCESS;
 }
 
@@ -61,7 +51,7 @@ bool ConfigFile::ReadNextLine()
 		{
 			*p = '\0';
 			*settingValue = '\0';
-			++line;
+			//++line;
 			return true;
 		}
 
@@ -83,7 +73,7 @@ bool ConfigFile::ReadNextLine()
 				if (c == '\n' || c == EOF)
 				{
 					*(trailingWhitespacePos ? trailingWhitespacePos : p) = '\0';
-					++line;
+					//++line;
 					return true;
 				}
 
