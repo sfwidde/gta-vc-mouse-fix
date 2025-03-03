@@ -4,8 +4,9 @@
  * 2024-01-10
  */
 
-#include "util/io.hpp"
 #include "gamepatch.hpp"
+#include "util/io.hpp"
+#include "util/common.hpp"
 #include <windows.h>
 #include <string.h>
 #include <stdlib.h>
@@ -13,11 +14,13 @@
 // -----------------------------------------------------------------------------
 
 static WNDPROC oldWndProc;
+static GameMem<FLOAT>* gameMouseX; // x-axis
+static GameMem<FLOAT>* gameMouseY; // y-axis
 static struct
 {
-	float mouse_x;     // VC:MP 0.4 equivalent: game_sensitivity
-	float mouse_y;     // VC:MP 0.4 equivalent: game_sensitivity_ratio
-	WORD  trigger_key; // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+	float mouse_x;    // VC:MP 0.4 equivalent: game_sensitivity
+	float mouse_y;    // VC:MP 0.4 equivalent: game_sensitivity_ratio
+	WORD  reload_key; // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
 } mouseFixSettings;
 
 // -----------------------------------------------------------------------------
@@ -29,7 +32,7 @@ static void ReadMouseFixSettingsFromConfigFile()
 	{
 		false, // mouse_x
 		false, // mouse_y
-		false  // trigger_key
+		false  // reload_key
 	};
 
 	ConfigFile mousefix_txt;
@@ -54,77 +57,111 @@ static void ReadMouseFixSettingsFromConfigFile()
 				mouseFixSettings.mouse_y = strtof(settingValue, &rem);
 				fieldHasValidValue[1] = (!*rem) && (mouseFixSettings.mouse_y >= 0.0f);
 			}
-			else if (!stricmp(settingName, "trigger_key"))
+			else if (!stricmp(settingName, "reload_key"))
 			{
-				mouseFixSettings.trigger_key = (WORD)strtoul(settingValue, &rem, 16);
+				mouseFixSettings.reload_key = (WORD)strtoul(settingValue, &rem, 16);
 				fieldHasValidValue[2] =
 					(!*rem) &&
-					(mouseFixSettings.trigger_key >= VK_LBUTTON) &&
-					(mouseFixSettings.trigger_key <= VK_OEM_CLEAR) &&
-					(mouseFixSettings.trigger_key != VK_F10);
+					(mouseFixSettings.reload_key >= VK_LBUTTON) &&
+					(mouseFixSettings.reload_key <= VK_OEM_CLEAR) &&
+					(mouseFixSettings.reload_key != VK_F10);
 			}
 		}
 		mousefix_txt.Close();
 	}
 
 	/* Default values in case we failed to read any of the settings */
-	if (!fieldHasValidValue[0]) { mouseFixSettings.mouse_x     = 0.0f;  }
-	if (!fieldHasValidValue[1]) { mouseFixSettings.mouse_y     = 1.2f;  }
-	if (!fieldHasValidValue[2]) { mouseFixSettings.trigger_key = VK_F9; }
+	if (!fieldHasValidValue[0]) { mouseFixSettings.mouse_x    = 0.0f;  }
+	if (!fieldHasValidValue[1]) { mouseFixSettings.mouse_y    = 1.2f;  }
+	if (!fieldHasValidValue[2]) { mouseFixSettings.reload_key = VK_F9; }
 }
 
 // -----------------------------------------------------------------------------
 
-static void HandleKeyDown(WORD key)
+static void OnGameFrame()
 {
-	if (key == mouseFixSettings.trigger_key)
-	{
-		// In case user changed any of the settings whilst in-game
-		ReadMouseFixSettingsFromConfigFile();
-
-		// Thanks Hanney for providing these addresses and of course
-		// credits to whoever found out about them in the first place
-		GameMem<FLOAT> gameMouseX(0x94DBD0);
-		GameMem<FLOAT> gameMouseY(0xA0D964);
-		// Apply sensitivity values accordingly
-		gameMouseX.value = ((mouseFixSettings.mouse_x != 0.0f) ? mouseFixSettings.mouse_x : 0.0025f);
-		gameMouseY.value = (gameMouseX.value * mouseFixSettings.mouse_y);
-	}
+	// Don't question me, this is the awfully awful way VC:MP 0.4 has been doing it
+	if (mouseFixSettings.mouse_x != 0.0f) { gameMouseX->value = mouseFixSettings.mouse_x; }
+	gameMouseY->value = (gameMouseX->value * mouseFixSettings.mouse_y);
 }
+
+static void OnKeyDown(WORD key)
+{
+	// Reload settings now
+	if (key == mouseFixSettings.reload_key) { ReadMouseFixSettingsFromConfigFile(); }
+}
+
+// -----------------------------------------------------------------------------
+// HOOK PROCEDURES
+// -----------------------------------------------------------------------------
 
 static LRESULT CALLBACK MouseFixWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
 	case WM_KEYDOWN:
-		HandleKeyDown((WORD)wParam);
+		OnKeyDown((WORD)wParam);
 	default:
 		return CallWindowProc(oldWndProc, hWnd, uMsg, wParam, lParam);
 	}
 }
 
+static NAKED CGame_ProcessHook()
+{
+	__asm
+	{
+		; The actual hook call
+		pushad
+		call OnGameFrame
+		popad
+
+		; First 7 bytes of CGame::Process() (0x4A4410)
+		push ebx          ; 53
+		push ebp          ; 55
+		mov eax, 0x4AB6C0
+		call eax          ; E8 A9 72 00 00
+
+		; Restore execution at 0x4A4410 + 7
+		mov eax, 0x4A4417
+		jmp eax
+	}
+}
+
 // -----------------------------------------------------------------------------
 
-static BOOL MouseFixInit()
+static void MouseFixInit()
 {
-	// Attempt to create a(nother - other DLLs could have done this themselves too) WndProc subclass
-	oldWndProc = (WNDPROC)SetWindowLong(*(HWND*)0x7897A4, GWL_WNDPROC, (LONG)MouseFixWndProc);
-	// We don't want to take up user's RAM if we are of no use
-	if (!oldWndProc) { return FALSE; }
+	/*
+		Credits to whoever originally found out about
+		the addresses we are about to use below
+	 */
 
+	// Create a(nother - other DLLs could have done this themselves too) WndProc subclass
+	oldWndProc = (WNDPROC)SetWindowLong(*(HWND*)0x7897A4, GWL_WNDPROC, (LONG)MouseFixWndProc);
+	
 	// Initial settings setup
 	ReadMouseFixSettingsFromConfigFile();
 
 	// Mouse lock fix taken from Silent's SilentPatch:
 	// https://github.com/CookiePLMonster/SilentPatch/blob/2a597da1bc2b974082c8b1fc13c08788b42615af/SilentPatchVC/SilentPatchVC.cpp#L2134
-	// -- could be ThirteenAG's (or somebody else's) work though, credits to whoever deserves them in this case
 	GameMem<DWORD>(0x601740).value = 0xC3C030;
 
-	// TODO: Hook the game's main loop to apply sensitivity values when a game is loaded
-	// and make it compatible with both singleplayer and 0.3z R2
+	// Thx Hanney for the addresses
+	gameMouseX = new GameMem<FLOAT>(0x94DBD0);
+	gameMouseY = new GameMem<FLOAT>(0xA0D964);
 
-	// Success
-	return TRUE;
+	// Thx AdTec_224 for the address
+	InstallGameFunctionHook<2>(0x4A4410, CGame_ProcessHook);
+}
+
+static void MouseFixFinal()
+{
+	// DllMain has some limitations, and my logic tells me not to call any Win32 API function
+	// before DLL_PROCESS_ATTACH and/or after DLL_PROCESS_DETACH; therefore, we do this not to call
+	// VirtualProtect() indirectly through GameMem's constructor/destructor in the case these variables
+	// were defined as global, which is what I would have done in the first place
+	delete gameMouseY;
+	delete gameMouseX;
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -133,11 +170,14 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	{
 	case DLL_PROCESS_ATTACH:
 		DisableThreadLibraryCalls(hinstDLL);
-		return MouseFixInit();
+		MouseFixInit();
+		break;
 
-	default:
-		return TRUE;
+	case DLL_PROCESS_DETACH:
+		MouseFixFinal();
+		break;
 	}
+	return TRUE;
 }
 
 // -----------------------------------------------------------------------------

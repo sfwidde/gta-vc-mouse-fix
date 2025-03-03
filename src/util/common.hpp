@@ -6,10 +6,9 @@
 
 #pragma once
 
-//#include <windows.h>
 //#include <stddef.h>
 
-//typedef CONST void* PCVOID; // To not use LPCVOID
+#define NAKED __declspec(naked) void
 
 // https://stackoverflow.com/a/18078435/14197165
 //template<typename T, size_t N>

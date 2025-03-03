@@ -7,9 +7,7 @@
 #pragma once
 
 #include <windows.h>
-
-//#define ASM_NOP 0x90
-//#define ASM_JMP 0xE9
+#include <string.h>
 
 template<typename T>
 class GameMem
@@ -33,3 +31,16 @@ public:
 		VirtualProtect(&value, sizeof(T), initialProt, &myProt);
 	}
 };
+
+template<SIZE_T ExtraByteCount/* = 0*/>
+void InstallGameFunctionHook(DWORD address, LPCVOID functionHook)
+{
+	// jmp (1) + address (4) = 5 + extra bytes
+	GameMem<BYTE[5 + ExtraByteCount]> theHook(address); // Unprotect
+
+	*theHook.value = 0xE9; // The JMP opcode
+	*(DWORD*)(theHook.value + 1) = ((DWORD)functionHook - (address + 5)); // Redirect address
+	memset((theHook.value + 5), 0x90, ExtraByteCount); // Fill extra bytes with NOPs
+
+	// Re-protect upon object deletion
+}
