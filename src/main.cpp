@@ -4,6 +4,13 @@
  * 2024-01-10
  */
 
+/*
+	Many thanks =) to
+	- Hanney (Providing mouse X and Y addresses)
+	- Silent (Mouse lock fix based off his code)
+	- AdTec_224 (Providing CGame::Process() address)
+ */
+
 #include "gamepatch.hpp"
 #include "util/io.hpp"
 #include "util/common.hpp"
@@ -13,10 +20,11 @@
 
 // -----------------------------------------------------------------------------
 
-static WNDPROC oldWndProc;
-static GameMem<FLOAT>* gameMouseX; // x-axis
-static GameMem<FLOAT>* gameMouseY; // y-axis
-static struct
+static WNDPROC oldWndProc; // Original WndProc procedure before subclassing
+static GameMem<FLOAT, false> gameMouseX(0x94DBD0); // x-axis mouse sensitivity
+static GameMem<FLOAT, false> gameMouseY(0xA0D964); // y-axis mouse sensitivity
+static GameHook<7> gameLoopHook(0x4A4410); // CGame::Process() hook
+static struct // User settings loaded into memory
 {
 	float mouse_x;    // VC:MP 0.4 equivalent: game_sensitivity
 	float mouse_y;    // VC:MP 0.4 equivalent: game_sensitivity_ratio
@@ -80,9 +88,9 @@ static void ReadMouseFixSettingsFromConfigFile()
 
 static void OnGameFrame()
 {
-	// Don't question me, this is the awfully awful way VC:MP 0.4 has been doing it
-	if (mouseFixSettings.mouse_x != 0.0f) { gameMouseX->value = mouseFixSettings.mouse_x; }
-	gameMouseY->value = (gameMouseX->value * mouseFixSettings.mouse_y);
+	// Don't question me, this is the (awfully awful) way VC:MP 0.4 has been doing it
+	if (mouseFixSettings.mouse_x != 0.0f) { gameMouseX.value = mouseFixSettings.mouse_x; }
+	gameMouseY.value = (gameMouseX.value * mouseFixSettings.mouse_y);
 }
 
 static void OnKeyDown(WORD key)
@@ -101,6 +109,7 @@ static LRESULT CALLBACK MouseFixWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPA
 	{
 	case WM_KEYDOWN:
 		OnKeyDown((WORD)wParam);
+		[[fallthrough]];
 	default:
 		return CallWindowProc(oldWndProc, hWnd, uMsg, wParam, lParam);
 	}
@@ -131,13 +140,8 @@ static NAKED CGame_ProcessHook()
 
 static void MouseFixInit()
 {
-	/*
-		Credits to whoever originally found out about
-		the addresses we are about to use below
-	 */
-
 	// Create a(nother - other DLLs could have done this themselves too) WndProc subclass
-	oldWndProc = (WNDPROC)SetWindowLong(*(HWND*)0x7897A4, GWL_WNDPROC, (LONG)MouseFixWndProc);
+	oldWndProc = (WNDPROC)SetWindowLong(GameMem<HWND>(0x7897A4).value, GWL_WNDPROC, (LONG)MouseFixWndProc);
 	
 	// Initial settings setup
 	ReadMouseFixSettingsFromConfigFile();
@@ -146,22 +150,20 @@ static void MouseFixInit()
 	// https://github.com/CookiePLMonster/SilentPatch/blob/2a597da1bc2b974082c8b1fc13c08788b42615af/SilentPatchVC/SilentPatchVC.cpp#L2134
 	GameMem<DWORD>(0x601740).value = 0xC3C030;
 
-	// Thx Hanney for the addresses
-	gameMouseX = new GameMem<FLOAT>(0x94DBD0);
-	gameMouseY = new GameMem<FLOAT>(0xA0D964);
+	// We avoid calling VirtualProtect() before DllMain this way
+	gameMouseX.Unprotect();
+	gameMouseY.Unprotect();
 
-	// Thx AdTec_224 for the address
-	InstallGameFunctionHook<2>(0x4A4410, CGame_ProcessHook);
+	// Install CGame::Process() hook
+	gameLoopHook.Install(CGame_ProcessHook);
 }
 
 static void MouseFixFinal()
 {
-	// DllMain has some limitations, and my logic tells me not to call any Win32 API function
-	// before DLL_PROCESS_ATTACH and/or after DLL_PROCESS_DETACH; therefore, we do this not to call
-	// VirtualProtect() indirectly through GameMem's constructor/destructor in the case these variables
-	// were defined as global, which is what I would have done in the first place
-	delete gameMouseY;
-	delete gameMouseX;
+	// Revert whatever changes we made
+	gameLoopHook.Uninstall({0x53, 0x55, 0xE8, 0xA9, 0x72, 0x00, 0x00});
+	gameMouseY.Reprotect();
+	gameMouseX.Reprotect();
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)

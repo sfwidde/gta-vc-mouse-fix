@@ -9,7 +9,11 @@
 #include <windows.h>
 #include <string.h>
 
-template<typename T>
+/*
+	T = data type to interpret this address as
+	AutoProtect = manual or automatic protection managing
+ */
+template<typename T, bool AutoProtect = true>
 class GameMem
 {
 public:
@@ -21,26 +25,47 @@ public:
 	GameMem(DWORD address) : value(*(T*)address)
 	{
 		// Unprotect this chunk of memory until we are done working with it
-		VirtualProtect(&value, sizeof(T), PAGE_EXECUTE_READWRITE, &initialProt);
+		if constexpr (AutoProtect) { Unprotect(); }
 	}
 
 	~GameMem()
 	{
 		// Restore original protection value
-		DWORD myProt;
-		VirtualProtect(&value, sizeof(T), initialProt, &myProt);
+		if constexpr (AutoProtect) { Reprotect(); }
 	}
+
+	void Unprotect() { VirtualProtect(&value, sizeof(T), PAGE_EXECUTE_READWRITE, &initialProt); }
+	void Reprotect() { DWORD myProt; VirtualProtect(&value, sizeof(T), initialProt, &myProt);   }
 };
 
-template<SIZE_T ExtraByteCount/* = 0*/>
-void InstallGameFunctionHook(DWORD address, LPCVOID functionHook)
+template<SIZE_T HookByteCount>
+class GameHook
 {
-	// jmp (1) + address (4) = 5 + extra bytes
-	GameMem<BYTE[5 + ExtraByteCount]> theHook(address); // Unprotect
+	// jmp (1) + address (4) = 5 [+ extra bytes]
+	static_assert(HookByteCount >= 5);
 
-	*theHook.value = 0xE9; // The JMP opcode
-	*(DWORD*)(theHook.value + 1) = ((DWORD)functionHook - (address + 5)); // Redirect address
-	memset((theHook.value + 5), 0x90, ExtraByteCount); // Fill extra bytes with NOPs
+private:
+	DWORD address;
 
-	// Re-protect upon object deletion
-}
+public:
+	GameHook(DWORD address) : address(address) {}
+
+	void Install(LPCVOID functionHook)
+	{
+		// Unprotect
+		GameMem<BYTE[HookByteCount]> theHook(address);
+
+		// Install the hook
+		*theHook.value = 0xE9;                                                // The JMP opcode
+		*(DWORD*)(theHook.value + 1) = ((DWORD)functionHook - (address + 5)); // Redirect address
+		memset((theHook.value + 5), 0x90, (HookByteCount - 5));               // Fill extra bytes with NOPs
+
+		// Re-protect upon object deletion
+	}
+
+	void Uninstall(const BYTE (&originalBytes)[HookByteCount])
+	{
+		// Restore original bytes
+		memcpy(GameMem<BYTE[HookByteCount]>(address).value, originalBytes, HookByteCount);
+	}
+};
