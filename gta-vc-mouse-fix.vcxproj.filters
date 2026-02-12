@@ -1,35 +1,53 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <None Include="README.md" />
-    <None Include="LICENSE" />
-    <None Include=".gitignore" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="src">
-      <UniqueIdentifier>{90ace7b0-f98f-453e-a75b-4287311ba3f9}</UniqueIdentifier>
+      <UniqueIdentifier>{5c074378-e99a-4a99-97de-1be2469e99a2}</UniqueIdentifier>
     </Filter>
     <Filter Include="src\util">
-      <UniqueIdentifier>{22843b78-1a58-4497-aee3-6aa5594e4632}</UniqueIdentifier>
+      <UniqueIdentifier>{485e2aec-8a90-4aec-97f4-af6fc2f2259a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\gamepatch.hpp">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\util\common.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
     <ClInclude Include="src\util\io.hpp">
       <Filter>src\util</Filter>
     </ClInclude>
+    <ClInclude Include="src\debug.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\gamepatch.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\main.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\settings.hpp">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\util\io.cpp">
       <Filter>src\util</Filter>
     </ClCompile>
+    <ClCompile Include="src\debug.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gamepatch.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\settings.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".gitignore" />
+    <None Include="LICENSE" />
+    <None Include="README.md" />
   </ItemGroup>
 </Project>

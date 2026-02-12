@@ -1,24 +1,27 @@
-# Mouse lock fix and sensitivity adjuster for Grand Theft Auto: Vice City
-This modification fixes mouse failing to work in GTA: Vice City on modern
-hardware and allows user to freely modify their mouse sensitivity, especially
-vertical (y-axis) sensitivity, which is unbalanced in the game by default.
+# Mouse Lock Fix and Sensitivity Adjuster for Grand Theft Auto: Vice City
+This modification addresses mouse not working issue in GTA: Vice City, and
+allows the user to freely modify their mouse sensitivity, especially vertical
+(y-axis) sensitivity which is unbalanced in the game by default.
 
-Please bear in mind that this mod was especially made for Vice City: Multiplayer
-(VC:MP) 0.4 players who wish to play VC:MP 0.3z R2 (or earlier versions) with
-their current 0.4 sensitivity settings. This doesn't mean, however, that the mod
-is limited to be used by VC:MP players only.
+Although the mod was created especially for Vice City: Multiplayer (VC:MP) 0.4
+players who wish to play VC:MP 0.3z R2 (or earlier versions) with their current
+0.4 sensitivity settings, it is meant to support single-player Vice City as
+well.
 
 ## Compatibility
-This mod is compatible with
-- Grand Theft Auto: Vice City (version 1.0)
-- Vice City: Multiplayer (up to version 0.3z R2)
+As long as you are on v1.0 of `gta-vc.exe`, the mod *should* work just fine.
 
 *No other versions are supported.*
 
 ## Installation steps
-- Download the mod (`mousefix.zip`) from the [**Releases** page](https://github.com/sfwidde/gta-vc-mouse-fix/releases/latest).
-- Extract **.zip** file contents (`mousefix.asi` and `mousefix.txt`) to your
-GTA's root directory.
+1. Download
+[**mousefix.zip**](https://github.com/sfwidde/gta-vc-mouse-fix/releases/latest/download/mousefix.zip)
+from the
+[**Releases**](https://github.com/sfwidde/gta-vc-mouse-fix/releases/latest)
+page.
+2. Extract `mousefix.asi` and `mousefix.txt` from the **.zip** archive to your
+game's root directory.
+3. Enjoy—fixes have been applied.
 
 ## Configure in-game mouse sensitivity
 ### `mousefix.txt` configuration file

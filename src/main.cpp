@@ -1,117 +1,65 @@
 /*
- * Mouse lock fix and sensitivity adjuster for Grand Theft Auto: Vice City
- * Author: sfwidde ([SS]Kelvin)
- * 2024-01-10
+ * Mouse Lock Fix and Sensitivity Adjuster
+ * for Grand Theft Auto: Vice City
+ *
+ * File: main.cpp | Created: 2024-01-10
+ * Author: sfwidde
  */
 
 /*
 	Many thanks =) to
-	- Hanney (Providing mouse X and Y addresses)
-	- Silent (Mouse lock fix based off his code)
-	- AdTec_224 (Providing CGame::Process() address)
+	- Swoorup, K^2 (WndProc subclass) (https://gtaforums.com/topic/490294-how-to-mod-gta-from-c/?do=findComment&comment=1060809319)
+	- Silent (Mouse lock fix based off his code) (https://github.com/CookiePLMonster/SilentPatch/blob/2a597da1bc2b974082c8b1fc13c08788b42615af/SilentPatchVC/SilentPatchVC.cpp#L2134)
+	- Hanney (Mouse X and Y addresses)
+	- AdTec_224 (CGame::Process() address)
  */
 
+#include "main.hpp"
+#include "settings.hpp"
 #include "gamepatch.hpp"
-#include "util/io.hpp"
 #include "util/common.hpp"
+#include "debug.hpp"
 #include <windows.h>
-#include <string.h>
-#include <stdlib.h>
+
+static LONG oldWndProc; // Original WndProc procedure before subclassing
+static MouseFixSettings mouseFixSettings; // User settings loaded into memory
+static GamePatch gameWnd(0x7897A4, 4); // HWND*
+static GamePatch gameMouseFix(0x601740, 6); // sub_601740
+static GamePatch gameMouseX(0x94DBD0, 4); // FLOAT*
+static GamePatch gameMouseY(0xA0D964, 4); // FLOAT*
+static GamePatch gameProcessHook(0x4A4410, 7); // CGame::Process()
 
 // -----------------------------------------------------------------------------
-
-static WNDPROC oldWndProc; // Original WndProc procedure before subclassing
-static GameMem<FLOAT, false> gameMouseX(0x94DBD0); // x-axis mouse sensitivity
-static GameMem<FLOAT, false> gameMouseY(0xA0D964); // y-axis mouse sensitivity
-static GameHook<7> gameLoopHook(0x4A4410); // CGame::Process() hook
-static struct // User settings loaded into memory
-{
-	float mouse_x;    // VC:MP 0.4 equivalent: game_sensitivity
-	float mouse_y;    // VC:MP 0.4 equivalent: game_sensitivity_ratio
-	WORD  reload_key; // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
-} mouseFixSettings;
-
-// -----------------------------------------------------------------------------
-
-static void ReadMouseFixSettingsFromConfigFile()
-{
-	// This is the best I could come up with
-	bool fieldHasValidValue[3] =
-	{
-		false, // mouse_x
-		false, // mouse_y
-		false  // reload_key
-	};
-
-	ConfigFile mousefix_txt;
-	if (mousefix_txt.Open("mousefix.txt") == CONFIGFILE_SUCCESS)
-	{
-		const char* settingName;
-		const char* settingValue;
-		char* rem;
-		while (mousefix_txt.ReadNextLine())
-		{
-			settingName = mousefix_txt.GetSettingName();
-			settingValue = mousefix_txt.GetSettingValue();
-			if (!settingName || !settingValue) { continue; }
-
-			if (!stricmp(settingName, "mouse_x"))
-			{
-				mouseFixSettings.mouse_x = strtof(settingValue, &rem);
-				fieldHasValidValue[0] = (!*rem) && (mouseFixSettings.mouse_x >= 0.0f);
-			}
-			else if (!stricmp(settingName, "mouse_y"))
-			{
-				mouseFixSettings.mouse_y = strtof(settingValue, &rem);
-				fieldHasValidValue[1] = (!*rem) && (mouseFixSettings.mouse_y >= 0.0f);
-			}
-			else if (!stricmp(settingName, "reload_key"))
-			{
-				mouseFixSettings.reload_key = (WORD)strtoul(settingValue, &rem, 16);
-				fieldHasValidValue[2] =
-					(!*rem) &&
-					(mouseFixSettings.reload_key >= VK_LBUTTON) &&
-					(mouseFixSettings.reload_key <= VK_OEM_CLEAR) &&
-					(mouseFixSettings.reload_key != VK_F10);
-			}
-		}
-		mousefix_txt.Close();
-	}
-
-	/* Default values in case we failed to read any of the settings */
-	if (!fieldHasValidValue[0]) { mouseFixSettings.mouse_x    = 0.0f;  }
-	if (!fieldHasValidValue[1]) { mouseFixSettings.mouse_y    = 1.2f;  }
-	if (!fieldHasValidValue[2]) { mouseFixSettings.reload_key = VK_F9; }
-}
-
+// HOOK CALLBACKS
 // -----------------------------------------------------------------------------
 
 static void OnGameFrame()
 {
 	// Don't question me, this is the (awfully awful) way VC:MP 0.4 has been doing it
-	if (mouseFixSettings.mouse_x != 0.0f) { gameMouseX.value = mouseFixSettings.mouse_x; }
-	gameMouseY.value = (gameMouseX.value * mouseFixSettings.mouse_y);
+	FLOAT& x = *(FLOAT*)gameMouseX.m_address;
+	FLOAT& y = *(FLOAT*)gameMouseY.m_address;
+	if (mouseFixSettings.mouse_x != 0.0f) { x = mouseFixSettings.mouse_x; }
+	y = (x * mouseFixSettings.mouse_y);
 }
 
-static void OnKeyDown(WORD key)
+static void OnKeyDown(UINT key)
 {
 	// Reload settings now
-	if (key == mouseFixSettings.reload_key) { ReadMouseFixSettingsFromConfigFile(); }
+	if (key == mouseFixSettings.reload_key) { mouseFixSettings.ReadFromConfigFile(); }
 }
 
 // -----------------------------------------------------------------------------
 // HOOK PROCEDURES
 // -----------------------------------------------------------------------------
 
-static LRESULT CALLBACK MouseFixWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK WndProcSubclass(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
 	case WM_KEYDOWN:
-		OnKeyDown((WORD)wParam);
-		[[fallthrough]];
+		OnKeyDown((UINT)wParam);
 	default:
-		return CallWindowProc(oldWndProc, hWnd, uMsg, wParam, lParam);
+		return CallWindowProc((WNDPROC)oldWndProc, hWnd, uMsg, wParam, lParam);
 	}
 }
 
@@ -125,12 +73,12 @@ static NAKED CGame_ProcessHook()
 		popad
 
 		; First 7 bytes of CGame::Process() (0x4A4410)
-		push ebx          ; 53
-		push ebp          ; 55
-		mov eax, 0x4AB6C0
-		call eax          ; E8 A9 72 00 00
+		push ebx
+		push ebp
+		mov  eax, 0x4AB6C0
+		call eax
 
-		; Restore execution at 0x4A4410 + 7
+		; Resume execution at 0x4A4410 + 7
 		mov eax, 0x4A4417
 		jmp eax
 	}
@@ -138,32 +86,40 @@ static NAKED CGame_ProcessHook()
 
 // -----------------------------------------------------------------------------
 
-static void MouseFixInit()
+static void Init()
 {
-	// Create a(nother - other DLLs could have done this themselves too) WndProc subclass
-	oldWndProc = (WNDPROC)SetWindowLong(GameMem<HWND>(0x7897A4).value, GWL_WNDPROC, (LONG)MouseFixWndProc);
-	
 	// Initial settings setup
-	ReadMouseFixSettingsFromConfigFile();
+	mouseFixSettings.ReadFromConfigFile();
 
-	// Mouse lock fix taken from Silent's SilentPatch:
-	// https://github.com/CookiePLMonster/SilentPatch/blob/2a597da1bc2b974082c8b1fc13c08788b42615af/SilentPatchVC/SilentPatchVC.cpp#L2134
-	GameMem<DWORD>(0x601740).value = 0xC3C030;
+	// [xor al, al] + [ret]
+	gameMouseFix.Install(3, 0x30, 0xC0, 0xC3);
 
-	// We avoid calling VirtualProtect() before DllMain this way
-	gameMouseX.Unprotect();
-	gameMouseY.Unprotect();
+	// Because unprotecting and reprotecting these on every frame
+	// would be a dumb-ass move we do it only once right here
+	gameMouseX.RemoveMemoryProtection();
+	gameMouseY.RemoveMemoryProtection();
 
-	// Install CGame::Process() hook
-	gameLoopHook.Install(CGame_ProcessHook);
+	// Hook CGame::Process()
+	gameProcessHook.Install(CGame_ProcessHook);
+
+	// Create a(nother - other DLLs could have done this themselves too) WndProc subclass
+	gameWnd.RemoveMemoryProtection();
+	oldWndProc = SetWindowLong(*(HWND*)gameWnd.m_address, GWL_WNDPROC, (LONG)WndProcSubclass);
+	gameWnd.RestoreMemoryProtection();
 }
 
-static void MouseFixFinal()
+static void Final()
 {
 	// Revert whatever changes we made
-	gameLoopHook.Uninstall({0x53, 0x55, 0xE8, 0xA9, 0x72, 0x00, 0x00});
-	gameMouseY.Reprotect();
-	gameMouseX.Reprotect();
+
+	gameWnd.RemoveMemoryProtection();
+	SetWindowLong(*(HWND*)gameWnd.m_address, GWL_WNDPROC, oldWndProc);
+	gameWnd.RestoreMemoryProtection();
+
+	gameProcessHook.RestoreOldData();
+	gameMouseY.RestoreMemoryProtection();
+	gameMouseX.RestoreMemoryProtection();
+	gameMouseFix.RestoreOldData();
 }
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -172,11 +128,13 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 	{
 	case DLL_PROCESS_ATTACH:
 		DisableThreadLibraryCalls(hinstDLL);
-		MouseFixInit();
+		OpenDebugConsole();
+		Init();
 		break;
 
 	case DLL_PROCESS_DETACH:
-		MouseFixFinal();
+		Final();
+		CloseDebugConsole();
 		break;
 	}
 	return TRUE;

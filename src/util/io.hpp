@@ -1,7 +1,9 @@
 /*
- * Mouse lock fix and sensitivity adjuster for Grand Theft Auto: Vice City
- * Author: sfwidde ([SS]Kelvin)
- * 2024-01-10
+ * Mouse Lock Fix and Sensitivity Adjuster
+ * for Grand Theft Auto: Vice City
+ *
+ * File: io.hpp | Created: 2024-01-10
+ * Author: sfwidde
  */
 
 #pragma once
@@ -18,23 +20,23 @@
 
 class ConfigFile
 {
-//public:
-//	static const char* GetErrorMessage(int errorCode);
+public:
+	static const char* GetErrorMessage(int errorCode);
 
 private:
-	FILE* file;
-	//long  line;
-	char  settingName[MAX_CONFIG_FILE_SETTING_NAME];
-	char  settingValue[MAX_CONFIG_FILE_SETTING_VALUE];
+	FILE* m_file;
+	long  m_lineNumber;
+	char  m_settingName[MAX_CONFIG_FILE_SETTING_NAME];
+	char  m_settingValue[MAX_CONFIG_FILE_SETTING_VALUE];
 
 public:
 	int  Open(const char* fileName);
 	void Close();
 
 	bool  ReadNextLine();
-	//long  GetLineNumber() const { return line; }
-	char* GetSettingName() { return *settingName ? settingName : nullptr; }
-	char* GetSettingValue() { return *settingValue ? settingValue : nullptr; }
+	long  GetLineNumber() const { return m_lineNumber; }
+	char* GetSettingName() { return *m_settingName ? m_settingName : nullptr; }
+	char* GetSettingValue() { return *m_settingValue ? m_settingValue : nullptr; }
 };
 
 // -----------------------------------------------------------------------------
