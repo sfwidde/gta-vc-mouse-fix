@@ -3,7 +3,7 @@
  * for Grand Theft Auto: Vice City
  *
  * File: settings.cpp | Created: 2025-05-22
- * Author: sfwidde
+ * Author: sfwidde (Kelvin)
  */
 
 #include "settings.hpp"
@@ -11,13 +11,16 @@
 #include "main.hpp"
 #include "debug.hpp"
 #include "util/common.hpp"
+#include <windows.h>
 #include <string.h>
 #include <stdlib.h>
 
-#define SETTING_FLAG_NONE       ((DWORD)0)
-#define SETTING_FLAG_MOUSE_X    ((DWORD)1)
-#define SETTING_FLAG_MOUSE_Y    ((DWORD)1 << 1)
-#define SETTING_FLAG_RELOAD_KEY ((DWORD)1 << 2)
+#define SETTING_FLAG_NONE    ((DWORD)0)
+#define SETTING_FLAG_MOUSE_X ((DWORD)1)
+#define SETTING_FLAG_MOUSE_Y ((DWORD)1 << 1)
+
+float MouseFixSettings::mouse_x;
+float MouseFixSettings::mouse_y;
 
 void MouseFixSettings::ReadFromConfigFile()
 {
@@ -28,12 +31,12 @@ void MouseFixSettings::ReadFromConfigFile()
 
 	ConfigFile mousefix_txt;
 	int x = mousefix_txt.Open(MOD_CONFIG_FILE_NAME);
-	if (x == CONFIGFILE_SUCCESS)
+	if (x == CONFIG_FILE_SUCCESS)
 	{
 		const char* settingName;
 		const char* settingValue;
 		char* rem;
-		OutputDebug("Retrieving user settings from '" MOD_CONFIG_FILE_NAME "'...");
+		OutputDebug("Reading user settings from '" MOD_CONFIG_FILE_NAME "'...");
 		while (mousefix_txt.ReadNextLine())
 		{
 			settingName = mousefix_txt.GetSettingName();
@@ -58,18 +61,6 @@ void MouseFixSettings::ReadFromConfigFile()
 					OutputDebug("-> mouse_y: %f", mouse_y);
 				}
 			}
-			else if (!stricmp(settingName, "reload_key"))
-			{
-				reload_key = (UINT)strtoul(settingValue, &rem, 16);
-				if ((!*rem) &&
-					(reload_key >= VK_LBUTTON) &&
-					(reload_key <= VK_OEM_CLEAR) &&
-					(reload_key != VK_F10))
-				{
-					ADD_FLAGS(flags, SETTING_FLAG_RELOAD_KEY);
-					OutputDebug("-> reload_key: 0x%02X", reload_key);
-				}
-			}
 		}
 		mousefix_txt.Close();
 	}
@@ -85,10 +76,5 @@ void MouseFixSettings::ReadFromConfigFile()
 	{
 		mouse_y = 1.2f;
 		OutputDebug("-> mouse_y: %f (default)", mouse_y);
-	}
-	if (!HAS_ANY_FLAGS(flags, SETTING_FLAG_RELOAD_KEY))
-	{
-		reload_key = VK_F9;
-		OutputDebug("-> reload_key: 0x%02X (default)", reload_key);
 	}
 }

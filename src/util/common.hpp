@@ -3,7 +3,7 @@
  * for Grand Theft Auto: Vice City
  *
  * File: common.hpp | Created: 2024-01-10
- * Author: sfwidde
+ * Author: sfwidde (Kelvin)
  */
 
 #pragma once
@@ -13,6 +13,7 @@
 // GOOD GRIEF, HE'S NAKED!!!!
 #define NAKED __declspec(naked) void
 
+// Add, clear and check for flags in a specific variable
 #define ADD_FLAGS(x, flags)     ((x) |= (flags))
 #define CLEAR_FLAGS(x, flags)   ((x) &= ~(flags))
 #define HAS_ANY_FLAGS(x, flags) (!!((x) & (flags)))

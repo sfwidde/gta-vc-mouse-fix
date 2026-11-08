@@ -3,17 +3,15 @@
  * for Grand Theft Auto: Vice City
  *
  * File: io.hpp | Created: 2024-01-10
- * Author: sfwidde
+ * Author: sfwidde (Kelvin)
  */
 
 #pragma once
 
 #include <stdio.h>
 
-// -----------------------------------------------------------------------------
-
-#define CONFIGFILE_SUCCESS         0
-#define CONFIGFILE_FILE_OPEN_ERROR 1
+#define CONFIG_FILE_SUCCESS    0
+#define CONFIG_FILE_OPEN_ERROR 1
 
 #define MAX_CONFIG_FILE_SETTING_NAME  64
 #define MAX_CONFIG_FILE_SETTING_VALUE 256
@@ -30,13 +28,11 @@ private:
 	char  m_settingValue[MAX_CONFIG_FILE_SETTING_VALUE];
 
 public:
-	int  Open(const char* fileName);
-	void Close();
+	int   Open(const char* fileName);
+	void  Close();
 
 	bool  ReadNextLine();
 	long  GetLineNumber() const { return m_lineNumber; }
-	char* GetSettingName() { return *m_settingName ? m_settingName : nullptr; }
-	char* GetSettingValue() { return *m_settingValue ? m_settingValue : nullptr; }
+	char* GetSettingName()      { return *m_settingName ? m_settingName : nullptr; }
+	char* GetSettingValue()     { return *m_settingValue ? m_settingValue : nullptr; }
 };
-
-// -----------------------------------------------------------------------------

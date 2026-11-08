@@ -3,19 +3,16 @@
  * for Grand Theft Auto: Vice City
  *
  * File: settings.hpp | Created: 2025-05-22
- * Author: sfwidde
+ * Author: sfwidde (Kelvin)
  */
 
 #pragma once
 
-#include <windows.h>
-
 class MouseFixSettings
 {
 public:
-	float mouse_x;    // VC:MP 0.4 equivalent: game_sensitivity
-	float mouse_y;    // VC:MP 0.4 equivalent: game_sensitivity_ratio
-	UINT  reload_key; // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+	static float mouse_x; // VC:MP 0.4 equivalent: game_sensitivity
+	static float mouse_y; // VC:MP 0.4 equivalent: game_sensitivity_ratio
 
-	void ReadFromConfigFile();
+	static void ReadFromConfigFile();
 };

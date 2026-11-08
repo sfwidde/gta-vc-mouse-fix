@@ -3,7 +3,7 @@
  * for Grand Theft Auto: Vice City
  *
  * File: io.cpp | Created: 2024-01-10
- * Author: sfwidde
+ * Author: sfwidde (Kelvin)
  */
 
 #include "io.hpp"
@@ -11,14 +11,12 @@
 #include <assert.h>
 #include <ctype.h>
 
-// -----------------------------------------------------------------------------
-
 const char* ConfigFile::GetErrorMessage(int errorCode)
 {
 	static constexpr const char* messages[] =
 	{
-		"success",                          // CONFIGFILE_SUCCESS
-		"unable to open configuration file" // CONFIGFILE_FILE_OPEN_ERROR
+		"success",                          // CONFIG_FILE_SUCCESS
+		"unable to open configuration file" // CONFIG_FILE_OPEN_ERROR
 	};
 	assert(errorCode >= 0 && errorCode <= (int)(GetArraySize(messages) - 1));
 	return messages[errorCode];
@@ -27,15 +25,20 @@ const char* ConfigFile::GetErrorMessage(int errorCode)
 int ConfigFile::Open(const char* fileName)
 {
 	m_file = fopen(fileName, "r");
-	if (!m_file) { return CONFIGFILE_FILE_OPEN_ERROR; }
+	if (!m_file) { return CONFIG_FILE_OPEN_ERROR; }
 
 	m_lineNumber = 0;
-	return CONFIGFILE_SUCCESS;
+	return CONFIG_FILE_SUCCESS;
 }
 
 void ConfigFile::Close()
 {
 	fclose(m_file);
+}
+
+static inline bool IsLineDone(int c)
+{
+	return c == '\n' || c == EOF;
 }
 
 bool ConfigFile::ReadNextLine()
@@ -48,8 +51,7 @@ bool ConfigFile::ReadNextLine()
 	while (true)
 	{
 		c = fgetc(m_file);
-		// We are done with this line
-		if ((c == '\n') || (c == EOF))
+		if (IsLineDone(c))
 		{
 		lineDone:
 			*p = '\0'; // m_settingName
@@ -59,11 +61,17 @@ bool ConfigFile::ReadNextLine()
 		}
 
 		// Line begins with a ';' and should therefore be treated as a comment
-		if ((c == ';') && (p == m_settingName))
+		if (c == ';' && p == m_settingName)
 		{
 			// Ignore all following characters until a newline is found
-			do { c = fgetc(m_file); } while ((c != '\n') && (c != EOF));
-			goto lineDone;
+			while (true)
+			{
+				c = fgetc(m_file);
+				if (IsLineDone(c))
+				{
+					goto lineDone;
+				}
+			}
 		}
 
 		// We have just encountered a whitespace character
@@ -82,7 +90,7 @@ bool ConfigFile::ReadNextLine()
 			while (true)
 			{
 				c = fgetc(m_file);
-				if ((c == '\n') || (c == EOF)) // END OF LINE
+				if (IsLineDone(c)) // END OF LINE
 				{
 					*(trailingWsPos ? trailingWsPos : p) = '\0';
 					++m_lineNumber;
@@ -111,5 +119,3 @@ bool ConfigFile::ReadNextLine()
 		if ((p - m_settingName) < (MAX_CONFIG_FILE_SETTING_NAME - 1)) { *p++ = c; }
 	}
 }
-
-// -----------------------------------------------------------------------------

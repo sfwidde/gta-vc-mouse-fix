@@ -3,7 +3,7 @@
  * for Grand Theft Auto: Vice City
  *
  * File: main.hpp | Created: 2024-05-15
- * Author: sfwidde
+ * Author: sfwidde (Kelvin)
  */
 
 #pragma once
